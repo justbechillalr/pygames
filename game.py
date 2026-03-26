@@ -17,6 +17,17 @@ clock = pygame.time.Clock()
 
 
 
+#block som endrer farge etter kollisjon
+
+ksquare_size = 40
+
+ksquare_width = 100
+ksquare_height = 60
+ksquare_y = width // 2
+ksquare_x = height // 2
+
+ksquare_color_red = (255,0,0)
+ksquare_color_green = (0,255,0)
 
 
 
@@ -24,14 +35,16 @@ clock = pygame.time.Clock()
 
 
 #player/block settings
-
+square_colour = (0,200,255)
 square_size = 40
 square_x = width //2
 square_y = height // 2
+square_red = (255,0,0)
+square_green = (0,255,0)
 
 y_velocity = 0
 gravity = 0.6
-jump_strength = -12
+jump_strength = -20
 on_ground = False
 
 
@@ -73,7 +86,7 @@ while True:
         square_y = Ground_y - size
         y_velocity = 0
         on_ground = True
-
+ 
 
     
 
@@ -82,15 +95,46 @@ while True:
     square_x = max(0, min(width-square_size, square_x))
     square_y = max(0, min(height-square_size, square_y))
 
-   
+
+
+
     #Drawing
     screen.fill((0,0,0))
-    pygame.draw.rect(
+    player = pygame.draw.rect(
         screen,
-        (0,200,250),
+        (square_colour),
         (square_x, square_y, square_size, square_size)
     )
 
+
+
+
+
+
+    platform = pygame.draw.rect(
+          screen,(ksquare_color_green),
+          (ksquare_y, ksquare_x, ksquare_height, ksquare_width)
+    )
+    
+    colliding = player.colliderect(platform)
+    if (colliding):
+
+        y_velocity = 0
+    
+
+
+    platform = pygame.draw.rect(
+         screen,
+          ksquare_color_green if colliding else ksquare_color_red,
+          platform
+    )
+    player = pygame.draw.rect(
+         screen, 
+          square_green if colliding else square_red,
+          player
+    )
     pygame.display.flip()
     clock.tick(100)
-        
+    
+
+   
