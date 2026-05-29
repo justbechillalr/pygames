@@ -1,123 +1,190 @@
-#imports pygame
 import pygame
 import random
-#launches pygame
+
 pygame.init()
-Screen_width, Screen_height = ((800,600))
-#setting screen As the value for the screen settings#
-screen = pygame.display.set_mode((Screen_width,Screen_height))
-#Pregame: values naming#
-#cooldownsystem#
-Shoot_cooldown = 190
-last_shot_time = 0
-#farger
-normal_color= (0,255,0)
-hit_color = (255,0,0)
+pygame.font.init()
+pygame.font.get_init()
+Screen_width, Screen_height = (800, 600)
+screen = pygame.display.set_mode((Screen_width, Screen_height))
 
-#Clock settings#
 clock = pygame.time.Clock()
-#Box spawn#
-player_y = Screen_height / 1.2
-player_x = Screen_width / 2
-#Box settings#
+
+#player
+player_x = Screen_width // 2
+player_y = Screen_height - 80
+player_speed = 6
 player_size = 50
-player_height = 50
-player_width =  50
-#bullets settings#
-bullet_width = 10
-bullet_height = 10
-bullet_speed = 8
+
+#hearts (health)
+player_hearts = 10
+
+#bullets (player)
 bullets = []
-#Game settings#
-speed = 10
-#text dumy spawn#
-target_y = Screen_height//2
-target_x = Screen_width //2
-target = pygame.Rect(target_x,target_y,player_width,player_height)
-target_color = normal_color
-target_list = pygame.Rect(target_x, target_y, player_width, player_width)
+bullet_speed = 8
+bullet_cooldown = 200
+last_shot = 0
 
-#statement
+#enemy bullets
+enemy_bullets = []
+enemy_bullet_speed = 4
 
-#fly = (Screen_width//2, Screen_height//2, size, size)
+#targets
+targets = []
+spawn_timer = 0
+spawn_delay = 1200
+player_color = (255,0,0)
 
-#dummy/bullet colide settings#
-#main game loop#
+#Colors
+black = (0,0,0)
+score = 0
+#YOU DIED#
+#display_surface = pygame.display.setmode((100,100))
+font = pygame.font.SysFont(None, 50)
+
+#font settings and values/ variables#
+
+#NPC die counter#
+font1 = pygame.font.SysFont('freesanbold.ttf', 50)
+
+
 running = True
 while running:
-    #first variables#
+    text1 = font1.render(f'Score: {score}', True, (0, 255, 0))
+    textRect1 = text1.get_rect()
+    textRect1.center = (250, 250)
     now = pygame.time.get_ticks()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        #Movement Settings#
+    
+    #movement
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
-        player_x -= speed
+        player_x -= player_speed
     if keys[pygame.K_d]:
-        player_x += speed
+        player_x += player_speed
     if keys[pygame.K_w]:
-        player_y -= speed
+        player_y -= player_speed
     if keys[pygame.K_s]:
-        player_y += speed
+        player_y += player_speed
+
+    #shoot
     if keys[pygame.K_SPACE]:
-        if now - last_shot_time > Shoot_cooldown:
-            testBullet = pygame.Rect(target_x,target_y,player_width,player_height)
-            colliding = testBullet.colliderect(target)
-            #Fire bullets
-            bullet_x = player_x + player_size //2
-            bullet_y = player_y + player_size // 2 - bullet_height // 2
-            bullets.append([bullet_x, bullet_y])
-            #resets cooldown#
-            last_shot_time = now
+        if now - last_shot > bullet_cooldown:
+            bullets.append([player_x + 25, player_y])
+            last_shot = now
 
-    #move the bullet#
-    
-        for bullet in bullets[:]:
-            bullet[1] -= bullet_speed
-            testBullet = pygame.Rect(bullet[0],bullet[1],bullet_width,bullet_height)
-        
-    
-        if colliding:
-            target_color = hit_color
-            bullets.remove(bullet)
+    #spawn enemies
+    if now - spawn_timer > spawn_delay:
+        spawn_timer = now
+
+        x = random.randint(0, Screen_width - 50)
+        y = random.randint(50, 200)
+
+        if random.choice([True, False]):
+            hp = 2
+            color = (255, 0, 0)
+        else:
+            hp = 1
+            color = (0, 255, 0)
+
+        targets.append([x, y, hp, color, 0])  # last value = shoot timer
+
+    #player bullets
+    for b in bullets[:]:
+        b[1] -= bullet_speed
+
+        b_rect = pygame.Rect(b[0], b[1], 10, 10)
+
+        hit = False
+
+        for t in targets:
+            t_rect = pygame.Rect(t[0], t[1], 50, 50)
+
+            if b_rect.colliderect(t_rect):
+                t[2] -= 1
+                hit = True
+                score += 1
+                
+                if t[2] <= 0:
+                    targets.remove(t)
+
+                break
+
+        if hit or b[1] < 0:
+            bullets.remove(b)
+
+    #enemy shooting + movement
+    for t in targets:
+        t[4] += 1
+
+        #move toward player slowly
+        if t[0] < player_x:
+            t[0] += 2
+        if t[0] > player_x:
+            t[0] -= 2
+
+        #enemy shoots every ~1.5 sec
+        if t[4] > 90:
+            enemy_bullets.append([t[0] + 25, t[1] + 50])
+            t[4] = 0
+
+    #enemy bullets move
+    for eb in enemy_bullets[:]:
+        eb[1] += enemy_bullet_speed
+
+        eb_rect = pygame.Rect(eb[0], eb[1], 10, 10)
+        player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+
+        if eb_rect.colliderect(player_rect):
+            player_hearts -= 1
+            enemy_bullets.remove(eb)
+            continue
+       
+        if eb[1] > Screen_height:
+            enemy_bullets.remove(eb)
+  
             
+    #draw background (sun warm)
+    screen.fill((255, 140, 0))
+    pygame.draw.circle(screen, (255, 220, 0), (650, 120), 60)
+    pygame.draw.circle(screen, (255, 180, 0), (650, 120), 100, 20)
 
-        
+    #player
+    pygame.draw.rect(screen, player_color, (player_x, player_y, player_size, player_size))
 
+    #player bullets
+    for b in bullets:
+        pygame.draw.rect(screen, (255, 0, 0), (b[0], b[1], 10, 10))
 
-                                    
-    #keeps Box in screen#
-    player_x = max (0, min(Screen_width  - player_width,player_x))
-    player_y = max (0, min(Screen_height - player_height,player_y))
-    #background color#
+    #enemies
+    for t in targets:
+        pygame.draw.rect(screen, t[3], (t[0], t[1], 50, 50))
+
+    #enemy bullets
+    for eb in enemy_bullets:
+        pygame.draw.rect(screen, (255, 255, 0), (eb[0], eb[1], 10, 10))
+
+    #hearts UI
+    for i in range(player_hearts):
+        pygame.draw.rect(screen, (255, 0, 100), (10 + i * 20, 10, 15, 15))
     
-    #screeen#                                LOADING SETTINGS
-    screen.fill((0,0,0))
+    player_dead = player_hearts <= 0
+    if player_dead:
+        text = font.render('you died', True, (255,0,0))
+        screen.blit(text,(300,300))
+        with open("highscore.txt", "a") as f:
+            f.write("Now the file has more content!")
 
-       #Target#
-    pygame.draw.rect(
-        screen,
-        normal_color,
-        (target_x,target_y,player_width,player_height)
-    )
-    #laster inn Box#
-    pygame.draw.rect(
-        screen,
-        (0,255,255),
-        (player_x,player_y,player_width,player_height)
-    )
-    #Loading bullets#
-    for bullet in bullets[:]:
-        pygame.draw.rect(
-            screen,
-            (255,0,0),
-            (bullet[0],bullet[1],bullet_width,bullet_height)
-        )
-    #Screen logic#
+            #open and read the file after the appending:
+        with open("highscore.txt") as f:
+            print(f.read())
+    screen.blit(text1, textRect1)
+        
+        ######################
+    
     pygame.display.flip()
-    #Clock activated#
     clock.tick(60)
-    #Makes game stop if exit#
+
 pygame.quit()
